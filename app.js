@@ -68,7 +68,7 @@ function resetLoginTimeout() {
 function updateMascot() {
   const mascot = $("#user-mascot");
   const isAlex = currentUser === "Alex";
-  mascot.src = isAlex ? "assets/goose.svg" : "assets/rat.svg";
+  mascot.src = isAlex ? "assets/mascots/goose-512.webp" : "assets/mascots/rat-512.webp";
   mascot.alt = isAlex ? "Goose climbing mascot for Alex" : "Rat climbing mascot for Dan";
 }
 
