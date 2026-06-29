@@ -256,6 +256,7 @@ function render() {
     button.type = "button";
     button.className = `day${date.getMonth() !== visibleMonth.getMonth() ? " is-outside" : ""}${entry ? ` is-selected is-${entry.status}` : ""}`;
     button.innerHTML = `<span class="day-number">${date.getDate()}</span>${entry ? `<span class="day-note">${entry.status === STATUS.ACCEPTED ? "Accepted" : entry.status === STATUS.CANCELED ? "Canceled" : `Proposed by ${escapeHtml(entry.proposedBy)}`}</span>` : ""}`;
+    button.setAttribute("aria-label", entry ? `${formatDate(key)}: ${entry.status === STATUS.ACCEPTED ? "Accepted" : entry.status === STATUS.CANCELED ? "Canceled" : `Proposed by ${entry.proposedBy}`}` : formatDate(key));
     button.addEventListener("click", () => proposeDate(key));
     grid.append(button);
   }

@@ -11,6 +11,7 @@ test("creates proposals, accepts incoming dates, saves, shares, and debugs encry
   await page.getByLabel("Note").fill(`${browserName} gym session`);
   await page.getByRole("button", { name: "Add date" }).click();
   await expect(page.getByText("proposed by Alex", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sun, Jul 12, 2026: Proposed by Alex/ })).toBeVisible();
   for (let tap = 0; tap < 10; tap += 1) {
     await page.getByRole("button", { name: "Goose mascot surprise" }).click();
   }

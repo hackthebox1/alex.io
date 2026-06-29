@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 import {
   STATUS,
@@ -14,6 +15,7 @@ import {
   pruneOldAcceptedEntries,
   sortEntries,
   statusChanges,
+  toDateKey,
   unpack,
   upcomingAccepted,
   upsertProposal,
@@ -47,6 +49,7 @@ assert.match(js, /assets\/mascots\/goose-motion.webp/);
 assert.match(js, /assets\/mascots\/rat-512.webp/);
 assert.match(js, /GOOSE_TAP_TARGET = 10/);
 assert.match(js, /gooseSignal/);
+assert.match(js, /aria-label/);
 assert.match(js, /Encryption returned an empty payload/);
 assert.match(js, /Generated share URL is missing encrypted data/);
 assert.match(js, /writeDebug\("capabilities"/);
@@ -66,6 +69,19 @@ assert.ok(statSync("assets/mascots/goose-motion.webp").size > 1000);
 assert.equal(otherUser("Alex"), "Dan");
 assert.equal(escapeHtml("<b>Dan & Alex's</b>"), "&lt;b&gt;Dan &amp; Alex&#039;s&lt;/b&gt;");
 assert.equal(formatDate("2026-07-01", "en-US"), "Wed, Jul 1, 2026");
+assert.equal(toDateKey(new Date(2026, 5, 28)), "2026-06-28");
+assert.equal(
+  execFileSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      "import { toDateKey } from './calendar-utils.js'; console.log(toDateKey(new Date(2026, 5, 28)));",
+    ],
+    { encoding: "utf8", env: { ...process.env, TZ: "Pacific/Kiritimati" } },
+  ).trim(),
+  "2026-06-28",
+);
 assert.deepEqual(upsertProposal([], "2026-07-01", "  gym  ", "Alex").map(({ date, note, status, proposedBy }) => ({ date, note, status, proposedBy })), [
   { date: "2026-07-01", note: "gym", status: STATUS.PROPOSED, proposedBy: "Alex" },
 ]);
