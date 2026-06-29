@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import {
   STATUS,
   acceptProposal,
+  cancelAccepted,
   declineProposal,
   escapeHtml,
   formatDate,
@@ -12,6 +13,7 @@ import {
   proposalsBy,
   pruneOldAcceptedEntries,
   sortEntries,
+  statusChanges,
   unpack,
   upcomingAccepted,
   upsertProposal,
@@ -27,9 +29,12 @@ assert.match(html, /user-mascot/);
 assert.match(html, /Upcoming accepted dates/);
 assert.match(html, /Your proposed dates/);
 assert.match(html, /Proposals from the other climber/);
+assert.match(html, /Status changes/);
 assert.match(js, /PBKDF2/);
 assert.match(js, /AES-GCM/);
 assert.match(js, /localStorage\.setItem/);
+assert.match(js, /queueAutoSave/);
+assert.match(js, /cancelAccepted/);
 assert.match(js, /navigator\.clipboard\.writeText/);
 assert.match(js, /execCommand\?\.\("copy"\)/);
 assert.match(js, /#data=/);
@@ -46,6 +51,7 @@ assert.match(html, /Copy debug log/);
 assert.match(css, /debug-log/);
 assert.match(css, /calendar-grid/);
 assert.match(css, /is-accepted/);
+assert.match(css, /is-canceled/);
 assert.match(css, /boulder-bg.svg/);
 
 assert.equal(otherUser("Alex"), "Dan");
@@ -57,6 +63,11 @@ assert.deepEqual(upsertProposal([], "2026-07-01", "  gym  ", "Alex").map(({ date
 const accepted = acceptProposal([{ date: "2026-07-02", note: "", status: STATUS.PROPOSED, proposedBy: "Alex" }], "2026-07-02", "Dan");
 assert.equal(accepted[0].status, STATUS.ACCEPTED);
 assert.equal(accepted[0].acceptedBy, "Dan");
+const canceled = cancelAccepted(accepted, "2026-07-02", "Alex");
+assert.equal(canceled[0].status, STATUS.CANCELED);
+assert.equal(canceled[0].canceledBy, "Alex");
+assert.deepEqual(statusChanges(canceled).map((entry) => entry.date), ["2026-07-02"]);
+assert.deepEqual(mergeEntries([], canceled, "Dan").map((entry) => entry.canceledBy), ["Alex"]);
 assert.deepEqual(declineProposal(accepted, "2026-07-02"), []);
 assert.deepEqual(sortEntries([{ date: "2026-08-01" }, { date: "2026-07-01" }]).map((entry) => entry.date), ["2026-07-01", "2026-08-01"]);
 assert.deepEqual(proposalsBy([{ date: "2026-07-01", status: STATUS.PROPOSED, proposedBy: "Alex" }], "Alex").map((entry) => entry.date), ["2026-07-01"]);
@@ -68,13 +79,13 @@ const merged = mergeEntries(
     { date: "2026-07-02", status: STATUS.PROPOSED, proposedBy: "Alex" },
   ],
   [
-    { date: "2026-07-01", status: STATUS.ACCEPTED, proposedBy: "Dan", acceptedBy: "Alex" },
+    { date: "2026-07-01", status: STATUS.CANCELED, proposedBy: "Dan", acceptedBy: "Alex", canceledBy: "Dan" },
     { date: "2026-07-03", status: STATUS.PROPOSED, proposedBy: "Dan" },
   ],
   "Alex",
 );
 assert.deepEqual(merged.map(({ date, status, proposedBy }) => ({ date, status, proposedBy })), [
-  { date: "2026-07-01", status: STATUS.ACCEPTED, proposedBy: "Dan" },
+  { date: "2026-07-01", status: STATUS.CANCELED, proposedBy: "Dan" },
   { date: "2026-07-02", status: STATUS.PROPOSED, proposedBy: "Alex" },
   { date: "2026-07-03", status: STATUS.PROPOSED, proposedBy: "Dan" },
 ]);

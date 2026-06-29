@@ -1,6 +1,7 @@
 import {
   STATUS,
   acceptProposal,
+  cancelAccepted,
   declineProposal,
   escapeHtml,
   formatDate,
@@ -10,6 +11,7 @@ import {
   proposalsBy,
   pruneOldAcceptedEntries,
   sortEntries,
+  statusChanges,
   toDateKey,
   unpack,
   upcomingAccepted,
@@ -27,6 +29,7 @@ let currentUser = "Alex";
 let entries = [];
 let visibleMonth = new Date();
 let timeoutId;
+let autoSaveId;
 
 const $ = (selector) => document.querySelector(selector);
 const unlockCard = $("#unlock-card");
@@ -142,6 +145,29 @@ async function loadEntries(secret, user) {
   return merged;
 }
 
+async function persistLocalCalendar(source = "manual") {
+  try {
+    localStorage.setItem(STORAGE_KEY, await encryptData({ entries }, password));
+    writeDebug("local autosave complete", { source, entryCount: entries.length });
+    return true;
+  } catch (error) {
+    writeDebug("local autosave failed", { source, error: describeError(error) });
+    return false;
+  }
+}
+
+function queueAutoSave(source) {
+  clearTimeout(autoSaveId);
+  if (!password) return;
+  autoSaveId = setTimeout(() => persistLocalCalendar(source), 150);
+}
+
+function updateEntries(nextEntries, source) {
+  entries = nextEntries;
+  render();
+  queueAutoSave(source);
+}
+
 function setEmptyList(list, message) {
   list.innerHTML = `<li>${message}</li>`;
 }
@@ -154,7 +180,7 @@ function renderEntryList(list, items, emptyMessage, actions = () => []) {
   }
   for (const entry of items) {
     const item = document.createElement("li");
-    item.innerHTML = `<span><strong>${formatDate(entry.date)}</strong>${entry.note ? ` — ${escapeHtml(entry.note)}` : ""}<br><small>${entry.status} by ${escapeHtml(entry.proposedBy)}${entry.acceptedBy ? `, accepted by ${escapeHtml(entry.acceptedBy)}` : ""}</small></span>`;
+    item.innerHTML = `<span><strong>${formatDate(entry.date)}</strong>${entry.note ? ` — ${escapeHtml(entry.note)}` : ""}<br><small>${entry.status} by ${escapeHtml(entry.proposedBy)}${entry.acceptedBy ? `, accepted by ${escapeHtml(entry.acceptedBy)}` : ""}${entry.canceledBy ? `, canceled by ${escapeHtml(entry.canceledBy)}` : ""}</small></span>`;
     for (const action of actions(entry)) item.append(action);
     list.append(item);
   }
@@ -189,7 +215,7 @@ function render() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `day${date.getMonth() !== visibleMonth.getMonth() ? " is-outside" : ""}${entry ? ` is-selected is-${entry.status}` : ""}`;
-    button.innerHTML = `<span class="day-number">${date.getDate()}</span>${entry ? `<span class="day-note">${entry.status === STATUS.ACCEPTED ? "Accepted" : `Proposed by ${escapeHtml(entry.proposedBy)}`}</span>` : ""}`;
+    button.innerHTML = `<span class="day-number">${date.getDate()}</span>${entry ? `<span class="day-note">${entry.status === STATUS.ACCEPTED ? "Accepted" : entry.status === STATUS.CANCELED ? "Canceled" : `Proposed by ${escapeHtml(entry.proposedBy)}`}</span>` : ""}`;
     button.addEventListener("click", () => proposeDate(key));
     grid.append(button);
   }
@@ -198,12 +224,18 @@ function render() {
     $("#accepted-list"),
     upcomingAccepted(entries),
     "No upcoming accepted dates yet.",
+    (entry) => [makeAction("Cancel", "remove", () => cancelDate(entry.date))],
   );
   renderEntryList(
     $("#your-proposals-list"),
     proposalsBy(entries, currentUser),
     "You have not proposed any dates yet.",
     (entry) => [makeAction("Remove", "remove", () => removeDate(entry.date))],
+  );
+  renderEntryList(
+    $("#status-changes-list"),
+    statusChanges(entries),
+    "No accepted or canceled dates yet.",
   );
   renderEntryList(
     $("#incoming-proposals-list"),
@@ -219,18 +251,19 @@ function render() {
 function proposeDate(date) {
   const existing = entries.find((entry) => entry.date === date);
   if (existing?.status === STATUS.ACCEPTED) return;
-  entries = upsertProposal(entries, date, existing?.note || "", currentUser);
-  render();
+  updateEntries(upsertProposal(entries, date, existing?.note || "", currentUser), "proposal");
 }
 
 function removeDate(date) {
-  entries = declineProposal(entries, date);
-  render();
+  updateEntries(declineProposal(entries, date), "decline");
 }
 
 function acceptDate(date) {
-  entries = acceptProposal(entries, date, currentUser);
-  render();
+  updateEntries(acceptProposal(entries, date, currentUser), "accept");
+}
+
+function cancelDate(date) {
+  updateEntries(cancelAccepted(entries, date, currentUser), "cancel");
 }
 
 async function createShareUrl() {
@@ -260,6 +293,7 @@ $("#unlock-form").addEventListener("submit", async (event) => {
     unlockStatus.textContent = "";
     resetLoginTimeout();
     render();
+    if (getLinkedPayload()) queueAutoSave("linked-import");
   } catch (error) {
     writeDebug("unlock failed", { error: describeError(error) });
     unlockStatus.textContent = "That password could not decrypt the linked calendar.";
@@ -274,7 +308,7 @@ $("#date-form").addEventListener("submit", (event) => {
   entries = upsertProposal(entries, date, note, currentUser);
   event.currentTarget.reset();
   visibleMonth = new Date(`${date}T12:00:00`);
-  render();
+  updateEntries(entries, "proposal-form");
 });
 
 $("#prev-month").addEventListener("click", () => { visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1); render(); });
@@ -282,7 +316,8 @@ $("#next-month").addEventListener("click", () => { visibleMonth = new Date(visib
 $("#lock-button").addEventListener("click", () => lockSession("manual"));
 async function saveLocalCalendar() {
   try {
-    localStorage.setItem(STORAGE_KEY, await encryptData({ entries }, password));
+    const saved = await persistLocalCalendar("manual");
+    if (!saved) throw new Error("Manual save failed");
     saveStatus.textContent = "Saved encrypted calendar in this browser.";
   } catch (error) {
     writeDebug("local save failed", { error: describeError(error) });

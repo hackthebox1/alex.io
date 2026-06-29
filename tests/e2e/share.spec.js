@@ -31,7 +31,21 @@ test("creates proposals, accepts incoming dates, saves, shares, and debugs encry
   await expect(page.getByText("Proposals from Alex")).toBeVisible();
   await page.getByRole("button", { name: "Acceptable", exact: true }).click();
   await expect(page.getByText("Accepted").first()).toBeVisible();
-  await expect(page.getByText("accepted by Dan")).toBeVisible();
+  await expect(page.locator("#accepted-list").getByText("accepted by Dan")).toBeVisible();
+  await page.locator("#accepted-list").getByRole("button", { name: "Cancel" }).click();
+  await expect(page.locator("#status-changes-list").getByText("canceled by Dan")).toBeVisible();
+  await expect(page.getByLabel("Debug log output")).toHaveValue(/local autosave complete/);
+
+  const previousShareUrl = await page.getByLabel("Encrypted share URL").inputValue();
+  await page.getByRole("button", { name: "Create encrypted link" }).click();
+  await expect(page.getByLabel("Encrypted share URL")).not.toHaveValue(previousShareUrl);
+  const canceledShareUrl = await page.getByLabel("Encrypted share URL").inputValue();
+  await page.goto(canceledShareUrl);
+  await page.reload();
+  await page.getByLabel("Alex", { exact: true }).check();
+  await page.getByLabel("Shared password").fill("test-password");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.locator("#status-changes-list").getByText("canceled by Dan")).toBeVisible();
 
   const debugText = await page.getByLabel("Debug log output").inputValue();
   expect(debugText).toContain("capabilities");

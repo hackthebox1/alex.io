@@ -2,6 +2,7 @@ export const USERS = ["Alex", "Dan"];
 export const STATUS = {
   PROPOSED: "proposed",
   ACCEPTED: "accepted",
+  CANCELED: "canceled",
 };
 
 export function otherUser(user) {
@@ -34,9 +35,10 @@ export function normalizeEntry(entry, fallbackUser = "Alex") {
   return {
     date: entry.date,
     note: String(entry.note || "").trim(),
-    status: entry.status === STATUS.ACCEPTED ? STATUS.ACCEPTED : STATUS.PROPOSED,
+    status: [STATUS.ACCEPTED, STATUS.CANCELED].includes(entry.status) ? entry.status : STATUS.PROPOSED,
     proposedBy: USERS.includes(entry.proposedBy) ? entry.proposedBy : fallbackUser,
     acceptedBy: USERS.includes(entry.acceptedBy) ? entry.acceptedBy : undefined,
+    canceledBy: USERS.includes(entry.canceledBy) ? entry.canceledBy : undefined,
     updatedAt: entry.updatedAt || new Date().toISOString(),
   };
 }
@@ -60,12 +62,18 @@ export function declineProposal(entries, date) {
   return entries.filter((entry) => entry.date !== date);
 }
 
+export function cancelAccepted(entries, date, canceledBy) {
+  return entries.map((entry) => entry.date === date
+    ? { ...entry, status: STATUS.CANCELED, canceledBy, updatedAt: new Date().toISOString() }
+    : entry);
+}
+
 export function mergeEntries(localEntries = [], linkedEntries = [], currentUser = "Alex") {
   const merged = new Map();
   for (const entry of normalizeEntries(localEntries, currentUser)) merged.set(entry.date, entry);
   for (const linked of normalizeEntries(linkedEntries, otherUser(currentUser))) {
     const existing = merged.get(linked.date);
-    if (linked.status === STATUS.ACCEPTED) {
+    if ([STATUS.ACCEPTED, STATUS.CANCELED].includes(linked.status)) {
       merged.set(linked.date, linked);
     } else if (!existing) {
       merged.set(linked.date, linked);
@@ -84,12 +92,16 @@ export function upcomingAccepted(entries, today = toDateKey(new Date())) {
   return sortEntries(entries).filter((entry) => entry.status === STATUS.ACCEPTED && entry.date >= today);
 }
 
+export function statusChanges(entries) {
+  return sortEntries(entries).filter((entry) => [STATUS.ACCEPTED, STATUS.CANCELED].includes(entry.status));
+}
+
 export function proposalsBy(entries, user) {
   return sortEntries(entries).filter((entry) => entry.status === STATUS.PROPOSED && entry.proposedBy === user);
 }
 
 export function pruneOldAcceptedEntries(entries, today = toDateKey(new Date())) {
-  const oldAccepted = sortEntries(entries).find((entry) => entry.status === STATUS.ACCEPTED && entry.date < today);
+  const oldAccepted = sortEntries(entries).find((entry) => [STATUS.ACCEPTED, STATUS.CANCELED].includes(entry.status) && entry.date < today);
   if (!oldAccepted) return entries;
   return entries.filter((entry) => entry !== oldAccepted);
 }
