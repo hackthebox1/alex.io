@@ -20,7 +20,9 @@ test("creates, copies, saves, and debugs encrypted share links", async ({ page, 
   const shareUrl = await page.getByLabel("Encrypted share URL").inputValue();
   expect(shareUrl).toContain("#data=");
 
-  const debugText = await page.locator("#debug-log").innerText();
+  const debugText = await page.getByLabel("Debug log output").inputValue();
   expect(debugText).toContain("capabilities");
+  expect(debugText).toContain("share url generated");
   expect(debugText).toContain("copy start");
+  await expect(page.getByRole("button", { name: "Copy debug log" })).toBeVisible();
 });

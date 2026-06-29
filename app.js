@@ -25,7 +25,8 @@ function writeDebug(message, details = {}) {
   const detailText = Object.entries(details)
     .map(([key, value]) => `${key}=${value}`)
     .join(" ");
-  debugLog.textContent += `[${timestamp}] ${message}${detailText ? ` ${detailText}` : ""}\n`;
+  debugLog.value += `[${timestamp}] ${message}${detailText ? ` ${detailText}` : ""}\n`;
+  debugLog.scrollTop = debugLog.scrollHeight;
 }
 
 function logCapabilities() {
@@ -176,6 +177,10 @@ async function copyShareUrl(url) {
   shareField.select();
   shareField.setSelectionRange(0, shareField.value.length);
 
+  if (!url.includes("#data=") || url.endsWith("#data=")) {
+    throw new Error("Generated share URL is missing encrypted data");
+  }
+
   try {
     await navigator.clipboard.writeText(url);
     writeDebug("clipboard write succeeded");
@@ -193,11 +198,26 @@ async function copyShareUrl(url) {
   }
 }
 
+$("#copy-debug-button").addEventListener("click", async () => {
+  debugLog.focus();
+  debugLog.select();
+  debugLog.setSelectionRange(0, debugLog.value.length);
+  try {
+    await navigator.clipboard.writeText(debugLog.value);
+    writeDebug("debug log copied");
+  } catch (error) {
+    writeDebug("debug log clipboard copy failed", { error: describeError(error) });
+    document.execCommand?.("copy");
+  }
+});
+
 $("#save-button").addEventListener("click", saveLocalCalendar);
 $("#share-button").addEventListener("click", async () => {
   try {
     const payload = await encryptData({ entries }, password);
+    if (!payload) throw new Error("Encryption returned an empty payload");
     const url = `${location.origin}${location.pathname}#data=${payload}`;
+    writeDebug("share url generated", { payloadLength: payload.length, urlLength: url.length, entryCount: entries.length });
     const copied = await copyShareUrl(url);
     saveStatus.textContent = copied
       ? "Encrypted link copied. Share the password through a different channel."

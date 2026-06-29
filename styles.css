@@ -46,9 +46,10 @@ h2, h3 { margin-top: 0; }
 .date-list li { display: flex; justify-content: space-between; gap: 1rem; align-items: center; border-bottom: 1px solid var(--line); padding: 0.65rem 0; }
 .date-list .remove { background: #8f352b; padding: 0.55rem 0.8rem; }
 .share-card textarea { margin-top: 0.75rem; }
-.debug-log { background: #1f2b27; border-radius: 1rem; color: #dff8ed; max-height: 14rem; overflow: auto; padding: 1rem; white-space: pre-wrap; }
+.debug-heading { align-items: center; display: flex; gap: 1rem; justify-content: space-between; }
+.debug-log { background: #1f2b27; border: 1px solid #314842; border-radius: 1rem; color: #dff8ed; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-height: 12rem; overflow: auto; padding: 1rem; resize: vertical; white-space: pre-wrap; }
 @media (max-width: 760px) {
-  .inline-field, .intro-card, .share-actions { align-items: stretch; flex-direction: column; }
+  .inline-field, .intro-card, .share-actions, .debug-heading { align-items: stretch; flex-direction: column; }
   .date-form { grid-template-columns: 1fr; }
   .day { min-height: 4rem; padding: 0.45rem; }
 }

@@ -14,8 +14,11 @@ assert.match(js, /localStorage\.setItem/);
 assert.match(js, /navigator\.clipboard\.writeText/);
 assert.match(js, /execCommand\?\.\("copy"\)/);
 assert.match(js, /#data=/);
+assert.match(js, /Encryption returned an empty payload/);
+assert.match(js, /Generated share URL is missing encrypted data/);
 assert.match(js, /writeDebug\("capabilities"/);
 assert.match(html, /Debug log/);
+assert.match(html, /Copy debug log/);
 assert.match(css, /debug-log/);
 assert.match(css, /calendar-grid/);
 
