@@ -104,6 +104,15 @@
           <textarea id="share-url" readonly rows="3" aria-label="Encrypted share URL"></textarea>
           <p class="status" id="save-status" role="status"></p>
         </section>
+
+        <section class="card debug-card" aria-labelledby="debug-title">
+          <h3 id="debug-title">Debug log</h3>
+          <p>
+            If saving or sharing fails, copy this log. It records browser capability
+            checks and the exact step that failed without including your password.
+          </p>
+          <pre id="debug-log" class="debug-log" aria-live="polite"></pre>
+        </section>
       </section>
     </main>
     <script src="app.js" type="module"></script>

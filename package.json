@@ -1,8 +1,12 @@
 {
   "type": "module",
   "scripts": {
-    "lint": "node --check app.js && node --check calendar-utils.js && node --check tests/calendar.test.js",
-    "test": "node tests/calendar.test.js"
+    "lint": "node --check app.js && node --check calendar-utils.js && node --check tests/calendar.test.js && node --check playwright.config.js && node --check tests/e2e/share.spec.js",
+    "test": "node tests/calendar.test.js && playwright test",
+    "test:unit": "node tests/calendar.test.js",
+    "test:e2e": "playwright test"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
 }

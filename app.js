@@ -13,6 +13,40 @@ const unlockCard = $("#unlock-card");
 const app = $("#app");
 const unlockStatus = $("#unlock-status");
 const saveStatus = $("#save-status");
+const debugLog = $("#debug-log");
+
+function describeError(error) {
+  if (!error) return "Unknown error";
+  return `${error.name || "Error"}: ${error.message || String(error)}`;
+}
+
+function writeDebug(message, details = {}) {
+  const timestamp = new Date().toISOString();
+  const detailText = Object.entries(details)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(" ");
+  debugLog.textContent += `[${timestamp}] ${message}${detailText ? ` ${detailText}` : ""}\n`;
+}
+
+function logCapabilities() {
+  writeDebug("capabilities", {
+    userAgent: navigator.userAgent,
+    secureContext: window.isSecureContext,
+    cryptoSubtle: Boolean(crypto?.subtle),
+    clipboard: Boolean(navigator.clipboard?.writeText),
+    execCommand: Boolean(document.execCommand),
+    localStorage: (() => {
+      try {
+        const key = `${STORAGE_KEY}-probe`;
+        localStorage.setItem(key, "1");
+        localStorage.removeItem(key);
+        return true;
+      } catch {
+        return false;
+      }
+    })(),
+  });
+}
 
 async function deriveKey(secret, salt) {
   const baseKey = await crypto.subtle.importKey("raw", encoder.encode(secret), "PBKDF2", false, ["deriveKey"]);
@@ -103,7 +137,8 @@ $("#unlock-form").addEventListener("submit", async (event) => {
     app.classList.remove("is-hidden");
     unlockStatus.textContent = "";
     render();
-  } catch {
+  } catch (error) {
+    writeDebug("unlock failed", { error: describeError(error) });
     unlockStatus.textContent = "That password could not decrypt the saved calendar.";
   }
 });
@@ -126,12 +161,14 @@ async function saveLocalCalendar() {
   try {
     localStorage.setItem(STORAGE_KEY, await encryptData({ entries }, password));
     saveStatus.textContent = "Saved encrypted calendar in this browser.";
-  } catch {
+  } catch (error) {
+    writeDebug("local save failed", { error: describeError(error) });
     saveStatus.textContent = "This browser blocked local saving. Create an encrypted link instead.";
   }
 }
 
 async function copyShareUrl(url) {
+  writeDebug("copy start", { urlLength: url.length });
   const shareField = $("#share-url");
   shareField.value = url;
   shareField.removeAttribute("hidden");
@@ -141,9 +178,18 @@ async function copyShareUrl(url) {
 
   try {
     await navigator.clipboard.writeText(url);
+    writeDebug("clipboard write succeeded");
     return true;
-  } catch {
-    return document.execCommand?.("copy") ?? false;
+  } catch (clipboardError) {
+    writeDebug("clipboard write failed", { error: describeError(clipboardError) });
+    try {
+      const copied = document.execCommand?.("copy") ?? false;
+      writeDebug("execCommand fallback finished", { copied });
+      return copied;
+    } catch (fallbackError) {
+      writeDebug("execCommand fallback failed", { error: describeError(fallbackError) });
+      return false;
+    }
   }
 }
 
@@ -156,9 +202,11 @@ $("#share-button").addEventListener("click", async () => {
     saveStatus.textContent = copied
       ? "Encrypted link copied. Share the password through a different channel."
       : "Encrypted link created. Copy it from the text box and send the password separately.";
-  } catch {
+  } catch (error) {
+    writeDebug("share link creation failed", { error: describeError(error) });
     saveStatus.textContent = "Could not create an encrypted link in this browser.";
   }
 });
 
 $("#climb-date").value = toDateKey(new Date());
+logCapabilities();

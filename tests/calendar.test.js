@@ -14,6 +14,9 @@ assert.match(js, /localStorage\.setItem/);
 assert.match(js, /navigator\.clipboard\.writeText/);
 assert.match(js, /execCommand\?\.\("copy"\)/);
 assert.match(js, /#data=/);
+assert.match(js, /writeDebug\("capabilities"/);
+assert.match(html, /Debug log/);
+assert.match(css, /debug-log/);
 assert.match(css, /calendar-grid/);
 
 assert.equal(escapeHtml("<b>Dan & Alex's</b>"), "&lt;b&gt;Dan &amp; Alex&#039;s&lt;/b&gt;");
