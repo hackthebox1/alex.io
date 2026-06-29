@@ -1,10 +1,28 @@
-import { escapeHtml, formatDate, pack, sortEntries, toDateKey, toggleEntry, unpack, upsertEntry } from "./calendar-utils.js";
+import {
+  STATUS,
+  acceptProposal,
+  declineProposal,
+  escapeHtml,
+  formatDate,
+  mergeEntries,
+  otherUser,
+  pack,
+  proposalsBy,
+  pruneOldAcceptedEntries,
+  sortEntries,
+  toDateKey,
+  unpack,
+  upcomingAccepted,
+  upsertProposal,
+} from "./calendar-utils.js";
 
 const STORAGE_KEY = "alex-dan-climbing-calendar";
+const MAX_SHARE_URL_LENGTH = 8000;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 let password = "";
+let currentUser = "Alex";
 let entries = [];
 let visibleMonth = new Date();
 
@@ -79,22 +97,63 @@ function getLinkedPayload() {
   return new URLSearchParams(location.hash.slice(1)).get("data");
 }
 
-async function loadEntries(secret) {
-  const payload = getLinkedPayload() || localStorage.getItem(STORAGE_KEY);
+async function readPayload(payload, secret) {
   if (!payload) return [];
   const data = await decryptData(payload, secret);
   return Array.isArray(data.entries) ? data.entries : [];
 }
 
+async function loadEntries(secret, user) {
+  const localEntries = await readPayload(localStorage.getItem(STORAGE_KEY), secret).catch((error) => {
+    writeDebug("local load failed", { error: describeError(error) });
+    return [];
+  });
+  const linkedEntries = await readPayload(getLinkedPayload(), secret).catch((error) => {
+    writeDebug("linked load failed", { error: describeError(error) });
+    throw error;
+  });
+  const merged = mergeEntries(localEntries, linkedEntries, user);
+  writeDebug("entries merged", { local: localEntries.length, linked: linkedEntries.length, merged: merged.length, user });
+  return merged;
+}
+
+function setEmptyList(list, message) {
+  list.innerHTML = `<li>${message}</li>`;
+}
+
+function renderEntryList(list, items, emptyMessage, actions = () => []) {
+  list.innerHTML = "";
+  if (!items.length) {
+    setEmptyList(list, emptyMessage);
+    return;
+  }
+  for (const entry of items) {
+    const item = document.createElement("li");
+    item.innerHTML = `<span><strong>${formatDate(entry.date)}</strong>${entry.note ? ` — ${escapeHtml(entry.note)}` : ""}<br><small>${entry.status} by ${escapeHtml(entry.proposedBy)}${entry.acceptedBy ? `, accepted by ${escapeHtml(entry.acceptedBy)}` : ""}</small></span>`;
+    for (const action of actions(entry)) item.append(action);
+    list.append(item);
+  }
+}
+
+function makeAction(label, className, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
 function render() {
   const monthLabel = $("#month-label");
   const grid = $("#calendar-grid");
-  const list = $("#date-list");
   const monthStart = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
   const start = new Date(monthStart);
   start.setDate(start.getDate() - start.getDay());
   monthLabel.textContent = monthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   grid.innerHTML = "";
+  $("#user-context").textContent = `${currentUser}, propose dates to climb with ${otherUser(currentUser)}. Accepted dates are shared wins for both of you.`;
+  $("#incoming-title").textContent = `Proposals from ${otherUser(currentUser)}`;
 
   for (let index = 0; index < 42; index += 1) {
     const date = new Date(start);
@@ -103,44 +162,80 @@ function render() {
     const entry = entries.find((item) => item.date === key);
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `day${date.getMonth() !== visibleMonth.getMonth() ? " is-outside" : ""}${entry ? " is-selected" : ""}`;
-    button.innerHTML = `<span class="day-number">${date.getDate()}</span>${entry?.note ? `<span class="day-note">${escapeHtml(entry.note)}</span>` : ""}`;
-    button.addEventListener("click", () => toggleDate(key));
+    button.className = `day${date.getMonth() !== visibleMonth.getMonth() ? " is-outside" : ""}${entry ? ` is-selected is-${entry.status}` : ""}`;
+    button.innerHTML = `<span class="day-number">${date.getDate()}</span>${entry ? `<span class="day-note">${entry.status === STATUS.ACCEPTED ? "Accepted" : `Proposed by ${escapeHtml(entry.proposedBy)}`}</span>` : ""}`;
+    button.addEventListener("click", () => proposeDate(key));
     grid.append(button);
   }
 
-  list.innerHTML = "";
-  sortEntries(entries).forEach((entry) => {
-    const item = document.createElement("li");
-    item.innerHTML = `<span><strong>${formatDate(entry.date)}</strong>${entry.note ? ` — ${escapeHtml(entry.note)}` : ""}</span>`;
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "remove";
-    remove.textContent = "Remove";
-    remove.addEventListener("click", () => toggleDate(entry.date));
-    item.append(remove);
-    list.append(item);
-  });
-  if (!entries.length) list.innerHTML = "<li>No dates yet. Add one above or tap a day.</li>";
+  renderEntryList(
+    $("#accepted-list"),
+    upcomingAccepted(entries),
+    "No upcoming accepted dates yet.",
+  );
+  renderEntryList(
+    $("#your-proposals-list"),
+    proposalsBy(entries, currentUser),
+    "You have not proposed any dates yet.",
+    (entry) => [makeAction("Remove", "remove", () => removeDate(entry.date))],
+  );
+  renderEntryList(
+    $("#incoming-proposals-list"),
+    proposalsBy(entries, otherUser(currentUser)),
+    `No proposals from ${otherUser(currentUser)} right now.`,
+    (entry) => [
+      makeAction("Acceptable", "accept", () => acceptDate(entry.date)),
+      makeAction("Not acceptable", "remove", () => removeDate(entry.date)),
+    ],
+  );
 }
 
-function toggleDate(date) {
-  entries = toggleEntry(entries, date);
+function proposeDate(date) {
+  const existing = entries.find((entry) => entry.date === date);
+  if (existing?.status === STATUS.ACCEPTED) return;
+  entries = upsertProposal(entries, date, existing?.note || "", currentUser);
   render();
+}
+
+function removeDate(date) {
+  entries = declineProposal(entries, date);
+  render();
+}
+
+function acceptDate(date) {
+  entries = acceptProposal(entries, date, currentUser);
+  render();
+}
+
+async function createShareUrl() {
+  let shareEntries = sortEntries(entries);
+  let pruned = 0;
+  while (true) {
+    const payload = await encryptData({ entries: shareEntries }, password);
+    if (!payload) throw new Error("Encryption returned an empty payload");
+    const url = `${location.origin}${location.pathname}#data=${payload}`;
+    if (url.length <= MAX_SHARE_URL_LENGTH) return { url, payload, pruned };
+    const nextEntries = pruneOldAcceptedEntries(shareEntries);
+    if (nextEntries.length === shareEntries.length) return { url, payload, pruned };
+    shareEntries = nextEntries;
+    pruned += 1;
+  }
 }
 
 $("#unlock-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  password = new FormData(event.currentTarget).get("password");
+  const form = new FormData(event.currentTarget);
+  password = form.get("password");
+  currentUser = form.get("currentUser");
   try {
-    entries = await loadEntries(password);
+    entries = await loadEntries(password, currentUser);
     unlockCard.classList.add("is-hidden");
     app.classList.remove("is-hidden");
     unlockStatus.textContent = "";
     render();
   } catch (error) {
     writeDebug("unlock failed", { error: describeError(error) });
-    unlockStatus.textContent = "That password could not decrypt the saved calendar.";
+    unlockStatus.textContent = "That password could not decrypt the linked calendar.";
   }
 });
 
@@ -149,7 +244,7 @@ $("#date-form").addEventListener("submit", (event) => {
   const form = new FormData(event.currentTarget);
   const date = form.get("climbDate");
   const note = form.get("climbNote").trim();
-  entries = upsertEntry(entries, date, note);
+  entries = upsertProposal(entries, date, note, currentUser);
   event.currentTarget.reset();
   visibleMonth = new Date(`${date}T12:00:00`);
   render();
@@ -214,10 +309,8 @@ $("#copy-debug-button").addEventListener("click", async () => {
 $("#save-button").addEventListener("click", saveLocalCalendar);
 $("#share-button").addEventListener("click", async () => {
   try {
-    const payload = await encryptData({ entries }, password);
-    if (!payload) throw new Error("Encryption returned an empty payload");
-    const url = `${location.origin}${location.pathname}#data=${payload}`;
-    writeDebug("share url generated", { payloadLength: payload.length, urlLength: url.length, entryCount: entries.length });
+    const { url, payload, pruned } = await createShareUrl();
+    writeDebug("share url generated", { payloadLength: payload.length, urlLength: url.length, entryCount: entries.length, pruned });
     const copied = await copyShareUrl(url);
     saveStatus.textContent = copied
       ? "Encrypted link copied. Share the password through a different channel."

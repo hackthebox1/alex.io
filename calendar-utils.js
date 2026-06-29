@@ -1,3 +1,13 @@
+export const USERS = ["Alex", "Dan"];
+export const STATUS = {
+  PROPOSED: "proposed",
+  ACCEPTED: "accepted",
+};
+
+export function otherUser(user) {
+  return user === "Alex" ? "Dan" : "Alex";
+}
+
 export function toDateKey(date) {
   return date.toISOString().slice(0, 10);
 }
@@ -20,18 +30,68 @@ export function formatDate(key, locales = undefined) {
   });
 }
 
-export function upsertEntry(entries, date, note = "") {
-  const trimmedNote = String(note).trim();
-  return entries.filter((entry) => entry.date !== date).concat({ date, note: trimmedNote });
+export function normalizeEntry(entry, fallbackUser = "Alex") {
+  return {
+    date: entry.date,
+    note: String(entry.note || "").trim(),
+    status: entry.status === STATUS.ACCEPTED ? STATUS.ACCEPTED : STATUS.PROPOSED,
+    proposedBy: USERS.includes(entry.proposedBy) ? entry.proposedBy : fallbackUser,
+    acceptedBy: USERS.includes(entry.acceptedBy) ? entry.acceptedBy : undefined,
+    updatedAt: entry.updatedAt || new Date().toISOString(),
+  };
 }
 
-export function toggleEntry(entries, date) {
-  const existing = entries.find((entry) => entry.date === date);
-  return existing ? entries.filter((entry) => entry.date !== date) : upsertEntry(entries, date);
+export function normalizeEntries(entries = [], fallbackUser = "Alex") {
+  return entries.filter((entry) => entry?.date).map((entry) => normalizeEntry(entry, fallbackUser));
+}
+
+export function upsertProposal(entries, date, note = "", proposedBy = "Alex") {
+  const proposal = normalizeEntry({ date, note, proposedBy, status: STATUS.PROPOSED }, proposedBy);
+  return entries.filter((entry) => entry.date !== date).concat(proposal);
+}
+
+export function acceptProposal(entries, date, acceptedBy) {
+  return entries.map((entry) => entry.date === date
+    ? { ...entry, status: STATUS.ACCEPTED, acceptedBy, updatedAt: new Date().toISOString() }
+    : entry);
+}
+
+export function declineProposal(entries, date) {
+  return entries.filter((entry) => entry.date !== date);
+}
+
+export function mergeEntries(localEntries = [], linkedEntries = [], currentUser = "Alex") {
+  const merged = new Map();
+  for (const entry of normalizeEntries(localEntries, currentUser)) merged.set(entry.date, entry);
+  for (const linked of normalizeEntries(linkedEntries, otherUser(currentUser))) {
+    const existing = merged.get(linked.date);
+    if (linked.status === STATUS.ACCEPTED) {
+      merged.set(linked.date, linked);
+    } else if (!existing) {
+      merged.set(linked.date, linked);
+    } else if (existing.status !== STATUS.ACCEPTED && existing.proposedBy !== currentUser) {
+      merged.set(linked.date, linked);
+    }
+  }
+  return sortEntries([...merged.values()]);
 }
 
 export function sortEntries(entries) {
   return [...entries].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function upcomingAccepted(entries, today = toDateKey(new Date())) {
+  return sortEntries(entries).filter((entry) => entry.status === STATUS.ACCEPTED && entry.date >= today);
+}
+
+export function proposalsBy(entries, user) {
+  return sortEntries(entries).filter((entry) => entry.status === STATUS.PROPOSED && entry.proposedBy === user);
+}
+
+export function pruneOldAcceptedEntries(entries, today = toDateKey(new Date())) {
+  const oldAccepted = sortEntries(entries).find((entry) => entry.status === STATUS.ACCEPTED && entry.date < today);
+  if (!oldAccepted) return entries;
+  return entries.filter((entry) => entry !== oldAccepted);
 }
 
 export function pack(buffer) {

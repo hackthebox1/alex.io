@@ -29,6 +29,11 @@
           stored; it decrypts local or linked calendar data in your browser.
         </p>
         <form id="unlock-form" class="stack">
+          <fieldset class="user-picker">
+            <legend>Who is using the calendar?</legend>
+            <label><input type="radio" name="currentUser" value="Alex" checked /> Alex</label>
+            <label><input type="radio" name="currentUser" value="Dan" /> Dan</label>
+          </fieldset>
           <label for="password">Shared password</label>
           <div class="inline-field">
             <input id="password" name="password" type="password" autocomplete="current-password" required />
@@ -43,9 +48,9 @@
           <div>
             <p class="eyebrow">Unlocked</p>
             <h2 id="calendar-title">Climbing calendar</h2>
-            <p>
-              Select possible climbing days. Use notes for gym, crag, time, or
-              whether Dan has confirmed.
+            <p id="user-context">
+              Select possible climbing days. Your dates become proposals until the
+              other person accepts them.
             </p>
           </div>
           <button id="lock-button" type="button" class="secondary">Lock</button>
@@ -54,7 +59,7 @@
         <section class="card controls" aria-label="Add climbing date">
           <form id="date-form" class="date-form">
             <div>
-              <label for="climb-date">Date Alex wants to climb with Dan</label>
+              <label for="climb-date">Date you want to climb</label>
               <input id="climb-date" name="climbDate" type="date" required />
             </div>
             <div>
@@ -84,8 +89,19 @@
         </section>
 
         <section class="card">
-          <h3>Selected dates</h3>
-          <ul id="date-list" class="date-list"></ul>
+          <h3>Upcoming accepted dates</h3>
+          <ul id="accepted-list" class="date-list"></ul>
+        </section>
+
+        <section class="card">
+          <h3>Your proposed dates</h3>
+          <ul id="your-proposals-list" class="date-list"></ul>
+        </section>
+
+        <section class="card">
+          <h3 id="incoming-title">Proposals from the other climber</h3>
+          <p>Mark each proposal acceptable or not acceptable.</p>
+          <ul id="incoming-proposals-list" class="date-list"></ul>
         </section>
 
         <section class="card share-card">

@@ -1,14 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-test("creates, copies, saves, and debugs encrypted share links", async ({ page, context, browserName }) => {
+test("creates proposals, accepts incoming dates, saves, shares, and debugs encrypted links", async ({ page, context, browserName }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]).catch(() => {});
   await page.goto("/");
 
   await page.getByLabel("Shared password").fill("test-password");
   await page.getByRole("button", { name: "Unlock" }).click();
-  await page.getByLabel("Date Alex wants to climb with Dan").fill("2026-07-12");
+  await page.getByLabel("Date you want to climb").fill("2026-07-12");
   await page.getByLabel("Note").fill(`${browserName} gym session`);
   await page.getByRole("button", { name: "Add date" }).click();
+  await expect(page.getByText("proposed by Alex", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Save locally" }).click();
   await expect(page.getByRole("status").last()).toContainText("Saved encrypted calendar");
@@ -20,9 +21,18 @@ test("creates, copies, saves, and debugs encrypted share links", async ({ page, 
   const shareUrl = await page.getByLabel("Encrypted share URL").inputValue();
   expect(shareUrl).toContain("#data=");
 
+  await page.goto(shareUrl);
+  await page.reload();
+  await page.getByLabel("Dan", { exact: true }).check();
+  await page.getByLabel("Shared password").fill("test-password");
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByText("Proposals from Alex")).toBeVisible();
+  await page.getByRole("button", { name: "Acceptable", exact: true }).click();
+  await expect(page.getByText("Accepted").first()).toBeVisible();
+  await expect(page.getByText("accepted by Dan")).toBeVisible();
+
   const debugText = await page.getByLabel("Debug log output").inputValue();
   expect(debugText).toContain("capabilities");
-  expect(debugText).toContain("share url generated");
-  expect(debugText).toContain("copy start");
+  expect(debugText).toContain("entries merged");
   await expect(page.getByRole("button", { name: "Copy debug log" })).toBeVisible();
 });
