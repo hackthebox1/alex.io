@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Alex & Dan Climbing Calendar</title>
+    <meta
+      name="description"
+      content="A private, GitHub Pages-friendly climbing calendar for Alex and Dan."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero" aria-labelledby="site-title">
+        <p class="eyebrow">Private climbing planner</p>
+        <h1 id="site-title">Alex, when do you want to climb with Dan?</h1>
+        <p class="lede">
+          Pick dates, add notes, and save an encrypted calendar locally or inside a
+          shareable link. GitHub Pages cannot safely hide a hard-coded password, so
+          this page uses your shared password as an encryption key instead.
+        </p>
+      </section>
+
+      <section class="card" id="unlock-card" aria-labelledby="unlock-title">
+        <h2 id="unlock-title">Unlock the calendar</h2>
+        <p>
+          Enter the known password that Alex and Dan share. The password is never
+          stored; it decrypts local or linked calendar data in your browser.
+        </p>
+        <form id="unlock-form" class="stack">
+          <label for="password">Shared password</label>
+          <div class="inline-field">
+            <input id="password" name="password" type="password" autocomplete="current-password" required />
+            <button type="submit">Unlock</button>
+          </div>
+        </form>
+        <p class="status" id="unlock-status" role="status"></p>
+      </section>
+
+      <section class="app is-hidden" id="app" aria-labelledby="calendar-title">
+        <div class="card intro-card">
+          <div>
+            <p class="eyebrow">Unlocked</p>
+            <h2 id="calendar-title">Climbing calendar</h2>
+            <p>
+              Select possible climbing days. Use notes for gym, crag, time, or
+              whether Dan has confirmed.
+            </p>
+          </div>
+          <button id="lock-button" type="button" class="secondary">Lock</button>
+        </div>
+
+        <section class="card controls" aria-label="Add climbing date">
+          <form id="date-form" class="date-form">
+            <div>
+              <label for="climb-date">Date Alex wants to climb with Dan</label>
+              <input id="climb-date" name="climbDate" type="date" required />
+            </div>
+            <div>
+              <label for="climb-note">Note</label>
+              <input
+                id="climb-note"
+                name="climbNote"
+                type="text"
+                maxlength="120"
+                placeholder="e.g. Movement at 6:30pm"
+              />
+            </div>
+            <button type="submit">Add date</button>
+          </form>
+        </section>
+
+        <section class="card calendar-card" aria-live="polite">
+          <div class="calendar-heading">
+            <button type="button" class="ghost" id="prev-month" aria-label="Previous month">‹</button>
+            <h3 id="month-label"></h3>
+            <button type="button" class="ghost" id="next-month" aria-label="Next month">›</button>
+          </div>
+          <div class="weekdays" aria-hidden="true">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
+        </section>
+
+        <section class="card">
+          <h3>Selected dates</h3>
+          <ul id="date-list" class="date-list"></ul>
+        </section>
+
+        <section class="card share-card">
+          <h3>Share securely</h3>
+          <p>
+            For two-person planning on static hosting, choose one of these options:
+          </p>
+          <ol>
+            <li><strong>Best for GitHub Pages:</strong> create an encrypted link below, then send the link separately from the password.</li>
+            <li><strong>Best shared state:</strong> later connect a backend such as Firebase/Supabase with Google or Apple sign-in and server-side rules.</li>
+          </ol>
+          <div class="share-actions">
+            <button id="save-button" type="button">Save locally</button>
+            <button id="share-button" type="button" class="secondary">Create encrypted link</button>
+          </div>
+          <textarea id="share-url" readonly rows="3" aria-label="Encrypted share URL"></textarea>
+          <p class="status" id="save-status" role="status"></p>
+        </section>
+      </section>
+    </main>
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
