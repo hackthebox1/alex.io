@@ -11,6 +11,12 @@ test("creates proposals, accepts incoming dates, saves, shares, and debugs encry
   await page.getByLabel("Note").fill(`${browserName} gym session`);
   await page.getByRole("button", { name: "Add date" }).click();
   await expect(page.getByText("proposed by Alex", { exact: true })).toBeVisible();
+  for (let tap = 0; tap < 10; tap += 1) {
+    await page.getByRole("button", { name: "Goose mascot surprise" }).click();
+  }
+  await expect(page.getByAltText("Goose climbing mascot for Alex")).toHaveAttribute("src", /goose-motion\.webp/);
+  await expect(page.getByLabel("Debug log output")).toHaveValue(/goose tapped count=10/);
+  await expect(page.getByAltText("Goose climbing mascot for Alex")).toHaveAttribute("src", /goose-512\.webp/, { timeout: 6000 });
 
   await page.getByRole("button", { name: "Save locally" }).click();
   await expect(page.getByRole("status").last()).toContainText("Saved encrypted calendar");
@@ -28,6 +34,8 @@ test("creates proposals, accepts incoming dates, saves, shares, and debugs encry
   await page.getByLabel("Shared password").fill("test-password");
   await page.getByRole("button", { name: "Unlock" }).click();
   await expect(page.getByAltText("Rat climbing mascot for Dan")).toBeVisible();
+  await expect(page.locator("#goose-received-card")).toBeVisible();
+  await expect(page.locator("#goose-received-card")).toContainText("Alex sent Dan a goose");
   await expect(page.getByText("Proposals from Alex")).toBeVisible();
   await page.getByRole("button", { name: "Acceptable", exact: true }).click();
   await expect(page.getByText("Accepted").first()).toBeVisible();

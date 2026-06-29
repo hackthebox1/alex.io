@@ -21,15 +21,22 @@ import {
 const STORAGE_KEY = "alex-dan-climbing-calendar";
 const MAX_SHARE_URL_LENGTH = 8000;
 const LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
+const GOOSE_TAP_TARGET = 10;
+const GOOSE_STILL_IMAGE = "assets/mascots/goose-512.webp";
+const GOOSE_MOTION_IMAGE = "assets/mascots/goose-motion.webp";
+const RAT_STILL_IMAGE = "assets/mascots/rat-512.webp";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 let password = "";
 let currentUser = "Alex";
 let entries = [];
+let gooseSignal;
 let visibleMonth = new Date();
 let timeoutId;
 let autoSaveId;
+let gooseTapCount = 0;
+let gooseMotionTimer;
 
 const $ = (selector) => document.querySelector(selector);
 const unlockCard = $("#unlock-card");
@@ -56,7 +63,10 @@ function lockSession(reason = "manual") {
   writeDebug("session locked", { reason });
   password = "";
   entries = [];
+  gooseSignal = undefined;
+  gooseTapCount = 0;
   clearTimeout(timeoutId);
+  clearTimeout(gooseMotionTimer);
   app.classList.add("is-hidden");
   unlockCard.classList.remove("is-hidden");
 }
@@ -70,9 +80,12 @@ function resetLoginTimeout() {
 
 function updateMascot() {
   const mascot = $("#user-mascot");
+  const mascotButton = $("#mascot-button");
   const isAlex = currentUser === "Alex";
-  mascot.src = isAlex ? "assets/mascots/goose-512.webp" : "assets/mascots/rat-512.webp";
+  mascot.src = isAlex ? GOOSE_STILL_IMAGE : RAT_STILL_IMAGE;
   mascot.alt = isAlex ? "Goose climbing mascot for Alex" : "Rat climbing mascot for Dan";
+  mascotButton.setAttribute("aria-label", isAlex ? "Goose mascot surprise" : "Rat climbing mascot");
+  mascotButton.disabled = !isAlex;
 }
 
 function logCapabilities() {
@@ -126,28 +139,40 @@ function getLinkedPayload() {
 }
 
 async function readPayload(payload, secret) {
-  if (!payload) return [];
+  if (!payload) return { entries: [], gooseSignal: undefined };
   const data = await decryptData(payload, secret);
-  return Array.isArray(data.entries) ? data.entries : [];
+  return {
+    entries: Array.isArray(data.entries) ? data.entries : [],
+    gooseSignal: data.gooseSignal?.from === "Alex" ? data.gooseSignal : undefined,
+  };
+}
+
+function newestGooseSignal(localSignal, linkedSignal) {
+  if (!localSignal) return linkedSignal;
+  if (!linkedSignal) return localSignal;
+  return new Date(linkedSignal.sentAt) > new Date(localSignal.sentAt) ? linkedSignal : localSignal;
 }
 
 async function loadEntries(secret, user) {
-  const localEntries = await readPayload(localStorage.getItem(STORAGE_KEY), secret).catch((error) => {
+  const localData = await readPayload(localStorage.getItem(STORAGE_KEY), secret).catch((error) => {
     writeDebug("local load failed", { error: describeError(error) });
-    return [];
+    return { entries: [], gooseSignal: undefined };
   });
-  const linkedEntries = await readPayload(getLinkedPayload(), secret).catch((error) => {
+  const linkedData = await readPayload(getLinkedPayload(), secret).catch((error) => {
     writeDebug("linked load failed", { error: describeError(error) });
     throw error;
   });
+  const localEntries = localData.entries;
+  const linkedEntries = linkedData.entries;
   const merged = mergeEntries(localEntries, linkedEntries, user);
-  writeDebug("entries merged", { local: localEntries.length, linked: linkedEntries.length, merged: merged.length, user });
+  gooseSignal = newestGooseSignal(localData.gooseSignal, linkedData.gooseSignal);
+  writeDebug("entries merged", { local: localEntries.length, linked: linkedEntries.length, merged: merged.length, gooseSignal: Boolean(gooseSignal), user });
   return merged;
 }
 
 async function persistLocalCalendar(source = "manual") {
   try {
-    localStorage.setItem(STORAGE_KEY, await encryptData({ entries }, password));
+    localStorage.setItem(STORAGE_KEY, await encryptData({ entries, gooseSignal }, password));
     writeDebug("local autosave complete", { source, entryCount: entries.length });
     return true;
   } catch (error) {
@@ -166,6 +191,12 @@ function updateEntries(nextEntries, source) {
   entries = nextEntries;
   render();
   queueAutoSave(source);
+}
+
+function updateGooseSignal(nextSignal) {
+  gooseSignal = nextSignal;
+  if (currentUser === "Dan") render();
+  queueAutoSave("goose-signal");
 }
 
 function setEmptyList(list, message) {
@@ -204,8 +235,17 @@ function render() {
   monthLabel.textContent = monthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   grid.innerHTML = "";
   updateMascot();
-  $("#user-context").textContent = `${currentUser}, propose dates to climb with ${otherUser(currentUser)}. Accepted dates are shared wins for both of you.`;
+  $("#user-context").textContent = `${currentUser}, propose climbing dates with ${otherUser(currentUser)}. Dates move from proposals into the accepted list when both of you agree.`;
   $("#incoming-title").textContent = `Proposals from ${otherUser(currentUser)}`;
+  const gooseReceivedCard = $("#goose-received-card");
+  if (currentUser === "Dan" && gooseSignal?.from === "Alex") {
+    const sentAt = new Date(gooseSignal.sentAt);
+    $("#goose-received-text").textContent = `Alex sent Dan a goose at ${sentAt.toLocaleString()}.`;
+    gooseReceivedCard.classList.remove("is-hidden");
+  } else {
+    gooseReceivedCard.classList.add("is-hidden");
+    $("#goose-received-text").textContent = "";
+  }
 
   for (let index = 0; index < 42; index += 1) {
     const date = new Date(start);
@@ -270,7 +310,7 @@ async function createShareUrl() {
   let shareEntries = sortEntries(entries);
   let pruned = 0;
   while (true) {
-    const payload = await encryptData({ entries: shareEntries }, password);
+    const payload = await encryptData({ entries: shareEntries, gooseSignal }, password);
     if (!payload) throw new Error("Encryption returned an empty payload");
     const url = `${location.origin}${location.pathname}#data=${payload}`;
     if (url.length <= MAX_SHARE_URL_LENGTH) return { url, payload, pruned };
@@ -314,6 +354,21 @@ $("#date-form").addEventListener("submit", (event) => {
 $("#prev-month").addEventListener("click", () => { visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1); render(); });
 $("#next-month").addEventListener("click", () => { visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1); render(); });
 $("#lock-button").addEventListener("click", () => lockSession("manual"));
+$("#mascot-button").addEventListener("click", () => {
+  if (currentUser !== "Alex") return;
+  gooseTapCount += 1;
+  writeDebug("goose tapped", { count: gooseTapCount });
+  if (gooseTapCount < GOOSE_TAP_TARGET) return;
+  gooseTapCount = 0;
+  const mascot = $("#user-mascot");
+  const cacheBust = `?played=${Date.now()}`;
+  mascot.src = `${GOOSE_MOTION_IMAGE}${cacheBust}`;
+  clearTimeout(gooseMotionTimer);
+  gooseMotionTimer = setTimeout(() => {
+    if (currentUser === "Alex") mascot.src = GOOSE_STILL_IMAGE;
+  }, 4300);
+  updateGooseSignal({ from: "Alex", to: "Dan", sentAt: new Date().toISOString() });
+});
 async function saveLocalCalendar() {
   try {
     const saved = await persistLocalCalendar("manual");

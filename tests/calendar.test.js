@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import {
   STATUS,
   acceptProposal,
@@ -26,6 +26,7 @@ const css = readFileSync("styles.css", "utf8");
 assert.match(html, /Alex, when do you want to climb with Dan\?/);
 assert.match(html, /Who is using the calendar\?/);
 assert.match(html, /user-mascot/);
+assert.match(html, /goose-received-card/);
 assert.match(html, /Upcoming accepted dates/);
 assert.match(html, /Your proposed dates/);
 assert.match(html, /Proposals from the other climber/);
@@ -42,7 +43,10 @@ assert.match(js, /MAX_SHARE_URL_LENGTH/);
 assert.match(js, /LOGIN_TIMEOUT_MS/);
 assert.match(js, /hashchange/);
 assert.match(js, /assets\/mascots\/goose-512.webp/);
+assert.match(js, /assets\/mascots\/goose-motion.webp/);
 assert.match(js, /assets\/mascots\/rat-512.webp/);
+assert.match(js, /GOOSE_TAP_TARGET = 10/);
+assert.match(js, /gooseSignal/);
 assert.match(js, /Encryption returned an empty payload/);
 assert.match(js, /Generated share URL is missing encrypted data/);
 assert.match(js, /writeDebug\("capabilities"/);
@@ -52,7 +56,9 @@ assert.match(css, /debug-log/);
 assert.match(css, /calendar-grid/);
 assert.match(css, /is-accepted/);
 assert.match(css, /is-canceled/);
+assert.match(css, new RegExp("aspect-ratio: 1 / 1"));
 assert.match(css, /boulder-bg.svg/);
+assert.ok(statSync("assets/mascots/goose-motion.webp").size > 1000);
 
 assert.equal(otherUser("Alex"), "Dan");
 assert.equal(escapeHtml("<b>Dan & Alex's</b>"), "&lt;b&gt;Dan &amp; Alex&#039;s&lt;/b&gt;");

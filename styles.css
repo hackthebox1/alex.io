@@ -39,7 +39,10 @@ h2, h3 { margin-top: 0; }
 .is-hidden { display: none; }
 .intro-card { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
 .session-panel { align-items: center; display: flex; gap: 1rem; }
-.mascot { border: 1px solid var(--line); border-radius: 1rem; height: 7rem; object-fit: cover; width: 10rem; }
+.mascot-button { background: #0f151b; border: 1px solid var(--line); border-radius: 1rem; padding: 0; width: min(16rem, 42vw); }
+.mascot-button:hover { background: #17202a; }
+.mascot { aspect-ratio: 1 / 1; border-radius: 1rem; display: block; height: auto; object-fit: contain; width: 100%; }
+.goose-received { border-color: #ffcf99; box-shadow: inset 0 0 0 1px #ffcf99, 0 24px 70px rgb(0 0 0 / 34%); }
 .date-form { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: 0.9rem; align-items: end; }
 .calendar-heading { display: flex; justify-content: space-between; align-items: center; }
 .weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.45rem; }
@@ -68,5 +71,5 @@ h2, h3 { margin-top: 0; }
   .inline-field, .intro-card, .share-actions, .debug-heading, .user-picker, .session-panel { align-items: stretch; flex-direction: column; }
   .date-form { grid-template-columns: 1fr; }
   .day { min-height: 4rem; padding: 0.45rem; }
-  .mascot { width: 100%; }
+  .mascot-button { width: 100%; }
 }

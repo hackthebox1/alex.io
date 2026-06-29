@@ -54,10 +54,18 @@
             </p>
           </div>
           <div class="session-panel">
-            <img id="user-mascot" class="mascot" src="assets/mascots/goose-512.webp" alt="Goose climbing mascot" />
+            <button id="mascot-button" class="mascot-button" type="button" aria-label="Goose mascot surprise">
+              <img id="user-mascot" class="mascot" src="assets/mascots/goose-512.webp" alt="Goose climbing mascot" />
+            </button>
             <button id="lock-button" type="button" class="secondary">Lock</button>
           </div>
         </div>
+
+        <section class="card goose-received is-hidden" id="goose-received-card" aria-live="polite">
+          <p class="eyebrow">Goose received</p>
+          <h3>A goose dispatch from Alex</h3>
+          <p id="goose-received-text"></p>
+        </section>
 
         <section class="card controls" aria-label="Add climbing date">
           <form id="date-form" class="date-form">
