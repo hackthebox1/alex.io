@@ -65,6 +65,10 @@ h2, h3 { margin-top: 0; }
 .user-picker input { width: auto; accent-color: var(--accent); }
 .date-list small { color: var(--muted); }
 .date-list .accept { background: #2f8c67; border-color: #8ee7bf; color: #07130e; padding: 0.55rem 0.8rem; }
+.problem-report { margin: 1.5rem 0 0; text-align: center; }
+.problem-report summary { color: #ff9b68; cursor: pointer; display: inline-block; font-weight: 900; list-style: none; text-decoration: underline; text-underline-offset: 0.25rem; }
+.problem-report summary::-webkit-details-marker { display: none; }
+.problem-report[open] { text-align: left; }
 .debug-heading { align-items: center; display: flex; gap: 1rem; justify-content: space-between; }
 .debug-log { background: #080d11; border: 1px solid #314842; border-radius: 1rem; color: #dff8ed; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-height: 12rem; overflow: auto; padding: 1rem; resize: vertical; white-space: pre-wrap; }
 @media (max-width: 760px) {

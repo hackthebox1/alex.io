@@ -140,20 +140,23 @@
 
       </section>
 
-      <section class="card debug-card" aria-labelledby="debug-title">
-        <div class="debug-heading">
-          <div>
-            <p class="eyebrow">Troubleshooting</p>
-            <h2 id="debug-title">Debug log</h2>
+      <details class="problem-report">
+        <summary>Report a Problem</summary>
+        <section class="card debug-card" aria-labelledby="debug-title">
+          <div class="debug-heading">
+            <div>
+              <p class="eyebrow">Troubleshooting</p>
+              <h2 id="debug-title">Debug log</h2>
+            </div>
+            <button id="copy-debug-button" type="button" class="secondary">Copy debug log</button>
           </div>
-          <button id="copy-debug-button" type="button" class="secondary">Copy debug log</button>
-        </div>
-        <p>
-          If saving or sharing fails, copy this log. It records browser capability
-          checks and the exact step that failed without including your password.
-        </p>
-        <textarea id="debug-log" class="debug-log" readonly rows="8" aria-live="polite" aria-label="Debug log output"></textarea>
-      </section>
+          <p>
+            If saving or sharing fails, copy this log. It records browser capability
+            checks and the exact step that failed without including your password.
+          </p>
+          <textarea id="debug-log" class="debug-log" readonly rows="8" aria-live="polite" aria-label="Debug log output"></textarea>
+        </section>
+      </details>
     </main>
     <script src="app.js" type="module"></script>
   </body>

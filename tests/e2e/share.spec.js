@@ -58,5 +58,7 @@ test("creates proposals, accepts incoming dates, saves, shares, and debugs encry
   const debugText = await page.getByLabel("Debug log output").inputValue();
   expect(debugText).toContain("capabilities");
   expect(debugText).toContain("entries merged");
+  await expect(page.getByText("Report a Problem")).toBeVisible();
+  await page.getByText("Report a Problem").click();
   await expect(page.getByRole("button", { name: "Copy debug log" })).toBeVisible();
 });
