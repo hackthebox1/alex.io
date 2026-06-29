@@ -1,6 +1,7 @@
 {
+  "type": "module",
   "scripts": {
-    "lint": "node --check app.js",
+    "lint": "node --check app.js && node --check calendar-utils.js && node --check tests/calendar.test.js",
     "test": "node tests/calendar.test.js"
   },
   "devDependencies": {}

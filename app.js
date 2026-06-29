@@ -1,3 +1,5 @@
+import { escapeHtml, formatDate, pack, sortEntries, toDateKey, toggleEntry, unpack, upsertEntry } from "./calendar-utils.js";
+
 const STORAGE_KEY = "alex-dan-climbing-calendar";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -12,28 +14,6 @@ const app = $("#app");
 const unlockStatus = $("#unlock-status");
 const saveStatus = $("#save-status");
 
-function toDateKey(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function formatDate(key) {
-  return new Date(`${key}T12:00:00`).toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 async function deriveKey(secret, salt) {
   const baseKey = await crypto.subtle.importKey("raw", encoder.encode(secret), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
@@ -43,15 +23,6 @@ async function deriveKey(secret, salt) {
     false,
     ["encrypt", "decrypt"],
   );
-}
-
-function pack(buffer) {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer))).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
-function unpack(text) {
-  const normalized = text.replaceAll("-", "+").replaceAll("_", "/").padEnd(Math.ceil(text.length / 4) * 4, "=");
-  return Uint8Array.from(atob(normalized), (char) => char.charCodeAt(0));
 }
 
 async function encryptData(data, secret) {
@@ -104,7 +75,7 @@ function render() {
   }
 
   list.innerHTML = "";
-  [...entries].sort((a, b) => a.date.localeCompare(b.date)).forEach((entry) => {
+  sortEntries(entries).forEach((entry) => {
     const item = document.createElement("li");
     item.innerHTML = `<span><strong>${formatDate(entry.date)}</strong>${entry.note ? ` — ${escapeHtml(entry.note)}` : ""}</span>`;
     const remove = document.createElement("button");
@@ -119,8 +90,7 @@ function render() {
 }
 
 function toggleDate(date) {
-  const existing = entries.find((entry) => entry.date === date);
-  entries = existing ? entries.filter((entry) => entry.date !== date) : [...entries, { date, note: "" }];
+  entries = toggleEntry(entries, date);
   render();
 }
 
@@ -143,7 +113,7 @@ $("#date-form").addEventListener("submit", (event) => {
   const form = new FormData(event.currentTarget);
   const date = form.get("climbDate");
   const note = form.get("climbNote").trim();
-  entries = entries.filter((entry) => entry.date !== date).concat({ date, note });
+  entries = upsertEntry(entries, date, note);
   event.currentTarget.reset();
   visibleMonth = new Date(`${date}T12:00:00`);
   render();
@@ -152,16 +122,43 @@ $("#date-form").addEventListener("submit", (event) => {
 $("#prev-month").addEventListener("click", () => { visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1); render(); });
 $("#next-month").addEventListener("click", () => { visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1); render(); });
 $("#lock-button").addEventListener("click", () => location.reload());
-$("#save-button").addEventListener("click", async () => {
-  localStorage.setItem(STORAGE_KEY, await encryptData({ entries }, password));
-  saveStatus.textContent = "Saved encrypted calendar in this browser.";
-});
+async function saveLocalCalendar() {
+  try {
+    localStorage.setItem(STORAGE_KEY, await encryptData({ entries }, password));
+    saveStatus.textContent = "Saved encrypted calendar in this browser.";
+  } catch {
+    saveStatus.textContent = "This browser blocked local saving. Create an encrypted link instead.";
+  }
+}
+
+async function copyShareUrl(url) {
+  const shareField = $("#share-url");
+  shareField.value = url;
+  shareField.removeAttribute("hidden");
+  shareField.focus();
+  shareField.select();
+  shareField.setSelectionRange(0, shareField.value.length);
+
+  try {
+    await navigator.clipboard.writeText(url);
+    return true;
+  } catch {
+    return document.execCommand?.("copy") ?? false;
+  }
+}
+
+$("#save-button").addEventListener("click", saveLocalCalendar);
 $("#share-button").addEventListener("click", async () => {
-  const payload = await encryptData({ entries }, password);
-  const url = `${location.origin}${location.pathname}#data=${payload}`;
-  $("#share-url").value = url;
-  await navigator.clipboard?.writeText(url).catch(() => {});
-  saveStatus.textContent = "Encrypted link created. Share the password through a different channel.";
+  try {
+    const payload = await encryptData({ entries }, password);
+    const url = `${location.origin}${location.pathname}#data=${payload}`;
+    const copied = await copyShareUrl(url);
+    saveStatus.textContent = copied
+      ? "Encrypted link copied. Share the password through a different channel."
+      : "Encrypted link created. Copy it from the text box and send the password separately.";
+  } catch {
+    saveStatus.textContent = "Could not create an encrypted link in this browser.";
+  }
 });
 
 $("#climb-date").value = toDateKey(new Date());
