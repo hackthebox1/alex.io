@@ -23,6 +23,7 @@ const css = readFileSync("styles.css", "utf8");
 
 assert.match(html, /Alex, when do you want to climb with Dan\?/);
 assert.match(html, /Who is using the calendar\?/);
+assert.match(html, /user-mascot/);
 assert.match(html, /Upcoming accepted dates/);
 assert.match(html, /Your proposed dates/);
 assert.match(html, /Proposals from the other climber/);
@@ -33,6 +34,10 @@ assert.match(js, /navigator\.clipboard\.writeText/);
 assert.match(js, /execCommand\?\.\("copy"\)/);
 assert.match(js, /#data=/);
 assert.match(js, /MAX_SHARE_URL_LENGTH/);
+assert.match(js, /LOGIN_TIMEOUT_MS/);
+assert.match(js, /hashchange/);
+assert.match(js, /assets\/goose.svg/);
+assert.match(js, /assets\/rat.svg/);
 assert.match(js, /Encryption returned an empty payload/);
 assert.match(js, /Generated share URL is missing encrypted data/);
 assert.match(js, /writeDebug\("capabilities"/);
@@ -41,6 +46,7 @@ assert.match(html, /Copy debug log/);
 assert.match(css, /debug-log/);
 assert.match(css, /calendar-grid/);
 assert.match(css, /is-accepted/);
+assert.match(css, /boulder-bg.svg/);
 
 assert.equal(otherUser("Alex"), "Dan");
 assert.equal(escapeHtml("<b>Dan & Alex's</b>"), "&lt;b&gt;Dan &amp; Alex&#039;s&lt;/b&gt;");

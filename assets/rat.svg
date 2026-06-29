@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="title desc">
+  <title id="title">Climbing rat mascot</title><desc id="desc">A slate gray rat wearing a tiny chalk bag and holding a carabiner.</desc>
+  <rect width="320" height="220" rx="28" fill="#111820"/>
+  <path d="M35 165c45-8 78-9 118-2 39 6 76 14 132-5" fill="none" stroke="#f26a2e" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="150" cy="112" rx="78" ry="52" fill="#7c8792"/>
+  <circle cx="92" cy="86" r="31" fill="#8e99a5"/>
+  <circle cx="78" cy="61" r="18" fill="#b7c0c8"/><circle cx="107" cy="58" r="17" fill="#b7c0c8"/>
+  <circle cx="82" cy="84" r="5" fill="#0b0d10"/><circle cx="115" cy="83" r="5" fill="#0b0d10"/>
+  <path d="M94 99c6 6 16 6 23 0" fill="none" stroke="#0b0d10" stroke-width="4" stroke-linecap="round"/>
+  <path d="M217 116c23-19 51-18 68 2" fill="none" stroke="#7c8792" stroke-width="14" stroke-linecap="round"/>
+  <rect x="167" y="137" width="40" height="34" rx="10" fill="#f5f1e8"/><path d="M177 142h20" stroke="#287c65" stroke-width="5" stroke-linecap="round"/>
+  <path d="M217 72a22 22 0 1 0 12 42 22 22 0 0 0-12-42zm5 14a8 8 0 1 1-4 15" fill="none" stroke="#f26a2e" stroke-width="8" stroke-linecap="round"/>
+</svg>

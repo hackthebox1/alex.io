@@ -18,6 +18,7 @@ import {
 
 const STORAGE_KEY = "alex-dan-climbing-calendar";
 const MAX_SHARE_URL_LENGTH = 8000;
+const LOGIN_TIMEOUT_MS = 15 * 60 * 1000;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -25,6 +26,7 @@ let password = "";
 let currentUser = "Alex";
 let entries = [];
 let visibleMonth = new Date();
+let timeoutId;
 
 const $ = (selector) => document.querySelector(selector);
 const unlockCard = $("#unlock-card");
@@ -45,6 +47,29 @@ function writeDebug(message, details = {}) {
     .join(" ");
   debugLog.value += `[${timestamp}] ${message}${detailText ? ` ${detailText}` : ""}\n`;
   debugLog.scrollTop = debugLog.scrollHeight;
+}
+
+function lockSession(reason = "manual") {
+  writeDebug("session locked", { reason });
+  password = "";
+  entries = [];
+  clearTimeout(timeoutId);
+  app.classList.add("is-hidden");
+  unlockCard.classList.remove("is-hidden");
+}
+
+function resetLoginTimeout() {
+  clearTimeout(timeoutId);
+  if (!app.classList.contains("is-hidden")) {
+    timeoutId = setTimeout(() => lockSession("timeout"), LOGIN_TIMEOUT_MS);
+  }
+}
+
+function updateMascot() {
+  const mascot = $("#user-mascot");
+  const isAlex = currentUser === "Alex";
+  mascot.src = isAlex ? "assets/goose.svg" : "assets/rat.svg";
+  mascot.alt = isAlex ? "Goose climbing mascot for Alex" : "Rat climbing mascot for Dan";
 }
 
 function logCapabilities() {
@@ -152,6 +177,7 @@ function render() {
   start.setDate(start.getDate() - start.getDay());
   monthLabel.textContent = monthStart.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   grid.innerHTML = "";
+  updateMascot();
   $("#user-context").textContent = `${currentUser}, propose dates to climb with ${otherUser(currentUser)}. Accepted dates are shared wins for both of you.`;
   $("#incoming-title").textContent = `Proposals from ${otherUser(currentUser)}`;
 
@@ -232,6 +258,7 @@ $("#unlock-form").addEventListener("submit", async (event) => {
     unlockCard.classList.add("is-hidden");
     app.classList.remove("is-hidden");
     unlockStatus.textContent = "";
+    resetLoginTimeout();
     render();
   } catch (error) {
     writeDebug("unlock failed", { error: describeError(error) });
@@ -252,7 +279,7 @@ $("#date-form").addEventListener("submit", (event) => {
 
 $("#prev-month").addEventListener("click", () => { visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1); render(); });
 $("#next-month").addEventListener("click", () => { visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1); render(); });
-$("#lock-button").addEventListener("click", () => location.reload());
+$("#lock-button").addEventListener("click", () => lockSession("manual"));
 async function saveLocalCalendar() {
   try {
     localStorage.setItem(STORAGE_KEY, await encryptData({ entries }, password));
@@ -305,6 +332,11 @@ $("#copy-debug-button").addEventListener("click", async () => {
     document.execCommand?.("copy");
   }
 });
+
+for (const eventName of ["click", "keydown", "touchstart"]) {
+  document.addEventListener(eventName, resetLoginTimeout, { passive: true });
+}
+window.addEventListener("hashchange", () => lockSession("new-link"));
 
 $("#save-button").addEventListener("click", saveLocalCalendar);
 $("#share-button").addEventListener("click", async () => {

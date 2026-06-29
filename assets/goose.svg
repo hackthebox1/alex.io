@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" role="img" aria-labelledby="title desc">
+  <title id="title">Climbing goose mascot</title><desc id="desc">A white goose perched on an orange boulder with a chalky wing.</desc>
+  <rect width="320" height="220" rx="28" fill="#101923"/>
+  <path d="M20 182c60-60 115-72 168-52 45 16 74 8 112-25v77z" fill="#f26a2e" opacity=".95"/>
+  <path d="M149 49c-21 10-29 34-22 57l15 54c7 25 48 31 73 14 18-12 24-38 9-54l-47-51c-8-9-17-25-28-20z" fill="#f7f3e8"/>
+  <path d="M156 48c17-11 39-8 51 9" fill="none" stroke="#f7f3e8" stroke-width="18" stroke-linecap="round"/>
+  <path d="M201 58l31 9-26 13z" fill="#f6a11a"/>
+  <circle cx="194" cy="55" r="4" fill="#0b0d10"/>
+  <path d="M155 120c19 18 43 22 68 10" fill="none" stroke="#c9d3d8" stroke-width="7" stroke-linecap="round"/>
+  <path d="M118 178l-12 20M149 181l-3 22" stroke="#f6a11a" stroke-width="7" stroke-linecap="round"/>
+  <path d="M48 150h72" stroke="#d7e4e8" stroke-width="8" stroke-linecap="round" opacity=".55"/>
+</svg>

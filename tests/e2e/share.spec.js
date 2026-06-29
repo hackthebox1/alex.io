@@ -6,6 +6,7 @@ test("creates proposals, accepts incoming dates, saves, shares, and debugs encry
 
   await page.getByLabel("Shared password").fill("test-password");
   await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByAltText("Goose climbing mascot for Alex")).toBeVisible();
   await page.getByLabel("Date you want to climb").fill("2026-07-12");
   await page.getByLabel("Note").fill(`${browserName} gym session`);
   await page.getByRole("button", { name: "Add date" }).click();
@@ -26,6 +27,7 @@ test("creates proposals, accepts incoming dates, saves, shares, and debugs encry
   await page.getByLabel("Dan", { exact: true }).check();
   await page.getByLabel("Shared password").fill("test-password");
   await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByAltText("Rat climbing mascot for Dan")).toBeVisible();
   await expect(page.getByText("Proposals from Alex")).toBeVisible();
   await page.getByRole("button", { name: "Acceptable", exact: true }).click();
   await expect(page.getByText("Accepted").first()).toBeVisible();
